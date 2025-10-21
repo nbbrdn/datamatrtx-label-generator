@@ -1,13 +1,14 @@
 import os
 import platform
 from io import BytesIO
-from reportlab.pdfgen import canvas
-from reportlab.lib.units import cm
-from reportlab.pdfbase import pdfmetrics
-from reportlab.pdfbase.ttfonts import TTFont
-from reportlab.lib.utils import ImageReader
+
 from PIL import Image
 from pystrich.datamatrix import DataMatrixEncoder  # ✅ правильный генератор
+from reportlab.lib.units import cm
+from reportlab.lib.utils import ImageReader
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+from reportlab.pdfgen import canvas
 
 
 def get_font_path():
@@ -44,13 +45,17 @@ def get_font_path():
     raise FileNotFoundError("Не найден подходящий TTF-шрифт с поддержкой кириллицы.")
 
 
-def generate_datamatrix(data: str, size: int = 100) -> Image:
+def generate_datamatrix(data: str, size_mm: float = 15.0) -> Image:
     """Генерация DataMatrix с помощью pystrich."""
     encoder = DataMatrixEncoder(data)
     png_bytes = encoder.get_imagedata()  # байты PNG
-    buffer = BytesIO(png_bytes)
-    img = Image.open(buffer)
-    img = img.resize((size, size), Image.Resampling.LANCZOS)
+    img = Image.open(BytesIO(png_bytes))
+
+    dpi = 300
+    size_px = int(size_mm / 25.4 * dpi)
+    img = img.resize((size_px, size_px), Image.Resampling.NEAREST)
+    img = img.convert("1")
+
     return img
 
 
@@ -72,24 +77,24 @@ def generate_labels(filename="labels.pdf", marks_file="marks.txt"):
 
     for mark in marks:
         # DataMatrix
-        qr_img = generate_datamatrix(mark, size=int(page_height * 0.8))
+        qr_img = generate_datamatrix(mark, size_mm=20)
         qr_buffer = BytesIO()
-        qr_img.save(qr_buffer, format="PNG")
+        qr_img.save(qr_buffer, format="PNG", dpi=(300, 300))
         qr_buffer.seek(0)
         qr_reader = ImageReader(qr_buffer)
 
         # Левая часть (QR)
-        qr_size = page_height * 0.8
-        qr_x = 0.3 * cm
+        qr_size = 2.0 * cm
+        qr_x = 0.7 * cm
         qr_y = (page_height - qr_size) / 2
-        c.drawImage(qr_reader, qr_x, qr_y, qr_size, qr_size)
+        c.drawImage(qr_reader, qr_x, qr_y, width=qr_size, height=qr_size, preserveAspectRatio=True, mask="auto")
 
         # Разделительная линия
         # c.setLineWidth(0.5)
         # c.line(page_width / 2, 0.5 * cm, page_width / 2, page_height - 0.5 * cm)
 
         # Правая часть (текст)
-        text_x = page_width / 2 + 0.3 * cm
+        text_x = page_width / 2 + 0.1 * cm
         text_y = page_height / 2 + 0.8 * cm
         c.setFont(font_name, 9)
         for line in label_text.split("\n"):
