@@ -95,4 +95,4 @@ c.line(page_width/2, 0.2*cm, page_width/2, page_height-0.2*cm)
 ## ✅ Совместимость
 
 Работает на **Windows, Linux и macOS**.  
-Поддерживает Python 3.8–3.12 без установки внешних C-библиотек.
+Поддерживает Python 3.8–3.12 без установки внешних C-библиотек.api key: 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
